@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from backend.ssh_client import fetch_running_config
@@ -16,6 +17,22 @@ logger = logging.getLogger("backend")
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Config Backup API")
+
+
+def _cors_origins() -> list[str]:
+    raw_origins = os.environ.get("FRONTEND_ORIGINS", "")
+    if not raw_origins:
+        return ["http://localhost:5173", "http://127.0.0.1:5173"]
+    return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class BackupRequest(BaseModel):
