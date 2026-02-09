@@ -206,3 +206,37 @@ curl -X POST http://localhost:8000/api/backup-config \
 
 - `device_type` must match a Netmiko platform string (examples: `cisco_ios`, `cisco_xe`, `cisco_nxos`). See Netmiko docs for the full list.
 - You must have network reachability from the server to the device (or a lab like CML/GNS3/EVE-NG).
+
+## Installer (systemd service)
+
+The `installer.sh` script installs the backend API as a persistent systemd service on Linux. It also builds the Vite frontend (if `npm` is available) so the UI is served at `http://<host>:8000/`.
+
+```bash
+sudo ./installer.sh install
+```
+
+### Lifecycle commands
+
+```bash
+sudo ./installer.sh start
+sudo ./installer.sh stop
+sudo ./installer.sh restart
+sudo ./installer.sh status
+sudo ./installer.sh uninstall
+```
+
+### Configuration overrides
+
+You can override defaults using environment variables:
+
+```bash
+sudo BACKUP_ROOT=/var/backups/network-configs \
+  FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173 \
+  ./installer.sh install
+```
+
+If you want to skip the frontend build (or you do not have Node/npm on the server):
+
+```bash
+sudo SKIP_FRONTEND_BUILD=1 ./installer.sh install
+```
