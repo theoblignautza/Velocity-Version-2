@@ -209,7 +209,7 @@ curl -X POST http://localhost:8000/api/backup-config \
 
 ## Installer (systemd service)
 
-The `installer.sh` script installs the backend API as a persistent systemd service on Linux. It also builds the Vite frontend (if `npm` is available) so the UI is served at `http://<host>:8000/`.
+The `installer.sh` script installs the backend API as a persistent systemd service on Linux. It also builds the Vite frontend so the UI is served at `http://<host>:8000/`. If `npm` is missing and no prebuilt UI exists, the installer will stop and prompt you to install Node/npm or explicitly skip the UI build.
 
 ```bash
 sudo ./installer.sh install

@@ -73,19 +73,28 @@ build_frontend() {
     echo "Skipping frontend build (SKIP_FRONTEND_BUILD=1)."
     return
   fi
-  if ! command -v npm >/dev/null 2>&1; then
-    echo "npm not found; skipping frontend build." >&2
+  if [[ -f "${APP_DIR}/frontend/dist/index.html" ]]; then
+    echo "Frontend build already present. Skipping build."
     return
   fi
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "npm not found and no frontend build present." >&2
+    echo "Install Node/npm or re-run with SKIP_FRONTEND_BUILD=1 to proceed without the UI." >&2
+    exit 1
+  fi
   if [[ ! -f "${APP_DIR}/frontend/package.json" ]]; then
-    echo "frontend package.json not found; skipping frontend build." >&2
-    return
+    echo "frontend package.json not found; cannot build UI." >&2
+    exit 1
   fi
   echo "Building frontend..."
   pushd "${APP_DIR}/frontend" >/dev/null
   VITE_API_BASE_URL="" npm install
   VITE_API_BASE_URL="" npm run build
   popd >/dev/null
+  if [[ ! -f "${APP_DIR}/frontend/dist/index.html" ]]; then
+    echo "Frontend build did not produce dist/index.html; aborting." >&2
+    exit 1
+  fi
 }
 
 write_env_file() {
