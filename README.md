@@ -209,7 +209,7 @@ curl -X POST http://localhost:8000/api/backup-config \
 
 ## Installer (systemd service)
 
-The `installer.sh` script installs the backend API as a persistent systemd service on Linux. It also builds the Vite frontend so the UI is served at `http://<host>:8000/`. If `npm` is missing and no prebuilt UI exists, the installer will stop and prompt you to install Node/npm or explicitly skip the UI build.
+The `installer.sh` script installs the backend API as a persistent systemd service on Linux.
 
 ```bash
 sudo ./installer.sh install
@@ -233,10 +233,4 @@ You can override defaults using environment variables:
 sudo BACKUP_ROOT=/var/backups/network-configs \
   FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173 \
   ./installer.sh install
-```
-
-If you want to skip the frontend build (or you do not have Node/npm on the server):
-
-```bash
-sudo SKIP_FRONTEND_BUILD=1 ./installer.sh install
 ```

@@ -8,8 +8,6 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from backend.ssh_client import fetch_running_config
@@ -35,11 +33,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-_FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
-
-if _FRONTEND_DIST.exists():
-    app.mount("/assets", StaticFiles(directory=_FRONTEND_DIST / "assets"), name="assets")
 
 
 class BackupRequest(BaseModel):

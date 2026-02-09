@@ -29,7 +29,6 @@ Environment overrides:
   BACKUP_ROOT        (default: /var/backups/network-configs)
   FRONTEND_ORIGINS   (default: http://localhost:5173,http://127.0.0.1:5173)
   PYTHON_BIN         (default: python3)
-  SKIP_FRONTEND_BUILD=1 (skip npm install/build if set)
 USAGE
 }
 
@@ -68,35 +67,6 @@ setup_venv() {
   "${APP_DIR}/.venv/bin/pip" install -r "${APP_DIR}/requirements.txt"
 }
 
-build_frontend() {
-  if [[ "${SKIP_FRONTEND_BUILD:-}" == "1" ]]; then
-    echo "Skipping frontend build (SKIP_FRONTEND_BUILD=1)."
-    return
-  fi
-  if [[ -f "${APP_DIR}/frontend/dist/index.html" ]]; then
-    echo "Frontend build already present. Skipping build."
-    return
-  fi
-  if ! command -v npm >/dev/null 2>&1; then
-    echo "npm not found and no frontend build present." >&2
-    echo "Install Node/npm or re-run with SKIP_FRONTEND_BUILD=1 to proceed without the UI." >&2
-    exit 1
-  fi
-  if [[ ! -f "${APP_DIR}/frontend/package.json" ]]; then
-    echo "frontend package.json not found; cannot build UI." >&2
-    exit 1
-  fi
-  echo "Building frontend..."
-  pushd "${APP_DIR}/frontend" >/dev/null
-  VITE_API_BASE_URL="" npm install
-  VITE_API_BASE_URL="" npm run build
-  popd >/dev/null
-  if [[ ! -f "${APP_DIR}/frontend/dist/index.html" ]]; then
-    echo "Frontend build did not produce dist/index.html; aborting." >&2
-    exit 1
-  fi
-}
-
 write_env_file() {
   mkdir -p "${ENV_DIR}"
   local backup_root="${BACKUP_ROOT:-${BACKUP_ROOT_DEFAULT}}"
@@ -133,7 +103,6 @@ install_service() {
   check_systemd
   copy_sources
   setup_venv
-  build_frontend
   write_env_file
   write_service_file
   systemctl daemon-reload
