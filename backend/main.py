@@ -52,6 +52,13 @@ def _backup_root() -> Path:
     return Path(os.environ.get("BACKUP_ROOT", "backups"))
 
 
+def _frontend_index() -> Path | None:
+    index_path = _FRONTEND_DIST / "index.html"
+    if index_path.exists():
+        return index_path
+    return None
+
+
 @app.post("/api/backup-config", response_model=BackupResponse)
 async def backup_config(payload: BackupRequest) -> BackupResponse:
     logger.info(
@@ -85,6 +92,27 @@ async def backup_config(payload: BackupRequest) -> BackupResponse:
     write_text(backup_path, running_config)
 
     return BackupResponse(status="success", device=payload.device_ip, file=backup_path.name)
+
+
+@app.get("/")
+async def frontend() -> FileResponse:
+    index_path = _frontend_index()
+    if not index_path:
+        raise HTTPException(status_code=404, detail="Frontend build not found")
+    return FileResponse(index_path)
+
+
+@app.get("/{full_path:path}")
+async def frontend_fallback(full_path: str) -> FileResponse:
+    if full_path.startswith("api") or full_path.startswith("health"):
+        raise HTTPException(status_code=404, detail="Not Found")
+    asset_path = _FRONTEND_DIST / full_path
+    if asset_path.exists() and asset_path.is_file():
+        return FileResponse(asset_path)
+    index_path = _frontend_index()
+    if not index_path:
+        raise HTTPException(status_code=404, detail="Frontend build not found")
+    return FileResponse(index_path)
 
 
 @app.get("/health")
