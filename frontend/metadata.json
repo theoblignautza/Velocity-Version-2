@@ -1,0 +1,5 @@
+{
+  "name": "Cisco Config Backup Dashboard",
+  "description": "A web-based dashboard to trigger configuration backups for Cisco network devices. This frontend collects device credentials and sends them to a backend service, which then connects to the device via SSH to perform the backup.",
+  "requestFramePermissions": []
+}
