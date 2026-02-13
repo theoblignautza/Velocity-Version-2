@@ -209,17 +209,11 @@ curl -X POST http://localhost:8000/api/backup-config \
 
 ## Installer (systemd service)
 
-The `installer.sh` script installs the backend API as a persistent systemd service on Linux. It also builds the Vite frontend so the UI is served at `http://<host>:8000/`. If `npm` is missing and no prebuilt UI exists, the installer will stop and prompt you to install Node/npm or explicitly skip the UI build.
+The `installer.sh` script installs the backend API as a persistent systemd service on Linux.
 
 ```bash
-sudo FORCE_KILL_PORT=1 ./installer.sh install
+sudo ./installer.sh install
 ```
-
-The installer now performs enterprise-style preflight checks and dependency installation:
-- Installs Python runtime, virtualenv tooling, **Node.js/npm**, and system utilities.
-- Verifies/clears the target API port (`APP_PORT`, default `8000`) when `FORCE_KILL_PORT=1`.
-- Stops conflicting systemd services bound to the same port when possible, then force-kills remaining listeners.
-- Verifies service health after startup.
 
 ### Lifecycle commands
 
@@ -239,62 +233,4 @@ You can override defaults using environment variables:
 sudo BACKUP_ROOT=/var/backups/network-configs \
   FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173 \
   ./installer.sh install
-```
-
-If you want to skip the frontend build:
-
-```bash
-sudo SKIP_FRONTEND_BUILD=1 ./installer.sh install
-```
-
-To uninstall everything and also remove backups:
-
-```bash
-sudo PURGE_BACKUPS=1 ./installer.sh uninstall
-```
-
-## New capabilities
-
-- **Discover Switches**: Use `POST /api/discover-switches` with subnet CIDR to discover hosts exposing SSH/Telnet.
-- **Live logs**: Connect to `ws://<host>:8000/ws/logs` for real-time progress events.
-- **Backup catalog**: `GET /api/backups` lists backed-up config files.
-- **Config content view**: `GET /api/backups/content?path=<relative-path>` returns file content.
-- **Restore**: `POST /api/restore-config` restores a selected backup over SSH or Telnet.
-
-## Security hardening
-
-- Backup file access is constrained to `BACKUP_ROOT` via canonical path validation.
-- Subnet input for discovery is validated as IPv4 CIDR and capped to 4096 addresses.
-- Protocol selection is restricted to `ssh`/`telnet` through strict schema validation.
-- Frontend default API target is same-origin to avoid external-LAN localhost mismatches.
-
-## API examples
-
-### Discover devices
-
-```bash
-curl -X POST http://192.168.50.249:8000/api/discover-switches \
-  -H "Content-Type: application/json" \
-  -d '{"subnet": "192.168.50.0/24"}'
-```
-
-### List backups
-
-```bash
-curl http://192.168.50.249:8000/api/backups
-```
-
-### Restore backup
-
-```bash
-curl -X POST http://192.168.50.249:8000/api/restore-config \
-  -H "Content-Type: application/json" \
-  -d '{
-    "device_ip": "192.168.50.20",
-    "username": "admin",
-    "password": "secret",
-    "device_type": "cisco_ios",
-    "protocol": "ssh",
-    "backup_file": "cisco_ios/192.168.50.20/running-config_2026-02-09.txt"
-  }'
 ```

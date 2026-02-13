@@ -7,10 +7,8 @@ import os
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from backend.discovery import scan_network, validate_subnet
@@ -51,6 +49,22 @@ if _FRONTEND_DIST.exists() and (_FRONTEND_DIST / "assets").exists():
     app.mount("/assets", StaticFiles(directory=_FRONTEND_DIST / "assets"), name="assets")
 
 
+def _cors_origins() -> list[str]:
+    raw_origins = os.environ.get("FRONTEND_ORIGINS", "")
+    if not raw_origins:
+        return ["http://localhost:5173", "http://127.0.0.1:5173"]
+    return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 class BackupRequest(BaseModel):
     device_ip: str = Field(..., min_length=1, description="Device IP or hostname")
     username: str = Field(..., min_length=1)
@@ -84,20 +98,9 @@ def _backup_root() -> Path:
 
 def _frontend_index() -> Path | None:
     index_path = _FRONTEND_DIST / "index.html"
-    return index_path if index_path.exists() else None
-
-
-@app.post("/api/discover-switches")
-async def discover_switches(payload: DiscoverRequest) -> dict[str, Any]:
-    try:
-        network = validate_subnet(payload.subnet)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    await log_stream.publish(f"Discovery started for {network.with_prefixlen}")
-    devices = await asyncio.to_thread(scan_network, payload.subnet)
-    await log_stream.publish(f"Discovery completed: found {len(devices)} reachable devices")
-    return {"subnet": payload.subnet, "devices": devices}
+    if index_path.exists():
+        return index_path
+    return None
 
 
 @app.post("/api/backup-config", response_model=BackupResponse)
@@ -203,6 +206,27 @@ async def frontend() -> FileResponse:
 @app.get("/{full_path:path}")
 async def frontend_fallback(full_path: str) -> FileResponse:
     if full_path.startswith("api") or full_path.startswith("health") or full_path.startswith("ws"):
+        raise HTTPException(status_code=404, detail="Not Found")
+    asset_path = _FRONTEND_DIST / full_path
+    if asset_path.exists() and asset_path.is_file():
+        return FileResponse(asset_path)
+    index_path = _frontend_index()
+    if not index_path:
+        raise HTTPException(status_code=404, detail="Frontend build not found")
+    return FileResponse(index_path)
+
+
+@app.get("/")
+async def frontend() -> FileResponse:
+    index_path = _frontend_index()
+    if not index_path:
+        raise HTTPException(status_code=404, detail="Frontend build not found")
+    return FileResponse(index_path)
+
+
+@app.get("/{full_path:path}")
+async def frontend_fallback(full_path: str) -> FileResponse:
+    if full_path.startswith("api") or full_path.startswith("health"):
         raise HTTPException(status_code=404, detail="Not Found")
     asset_path = _FRONTEND_DIST / full_path
     if asset_path.exists() and asset_path.is_file():
